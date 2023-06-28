@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="mypermobil",
-    version="0.1.0",
+    version="0.1.1",
     description="A Python wrapper for the MyPermobil API",
     url="https://github.com/IsakNyberg/MyPermobil-API",
     author="Isak Nyberg",
