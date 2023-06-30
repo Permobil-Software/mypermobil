@@ -295,13 +295,18 @@ class MyPermobil:
                 expiration_date = date.strftime("%Y-%m-%d")
             self.expiration_date = expiration_date
 
-        if response.status in (400, 401, 403, 500):
-            text = response.text()
+        elif response.status in (400, 401, 403, 500):
+            resp = await response.json()
+            raise MyPermobilAPIException(resp.get("error", resp))
+        else:
+            text = await response.text()
             raise MyPermobilAPIException(text)
 
         return self.token, self.expiration_date
 
-    async def request_item(self, item: str, headers: dict = None) -> str | int:
+    async def request_item(
+        self, item: str, headers: dict = None
+    ) -> str | int | float | bool:
         """Takes and item, finds the endpoint and makes the request."""
         if headers is None:
             headers = self.headers
