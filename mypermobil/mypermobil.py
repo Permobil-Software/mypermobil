@@ -77,7 +77,7 @@ def validate_code(code: str) -> str:
         raise MyPermobilClientException("Code must be a number") from err
     if len(code) != 6:
         # the code must be 6 digits long
-        raise MyPermobilClientException("Invalid code")
+        raise MyPermobilClientException("Code must be 6 digits long")
     return code
 
 
@@ -294,8 +294,11 @@ class MyPermobil:
                 date = datetime.datetime.now() + time_delta
                 expiration_date = date.strftime("%Y-%m-%d")
             self.expiration_date = expiration_date
-
-        elif response.status in (400, 401, 403, 500):
+        elif response.status == 401:
+            raise MyPermobilAPIException("Email not registered for region")
+        elif response.status == 403:
+            raise MyPermobilAPIException("Incorrect code")
+        elif response.status in (400, 500):
             resp = await response.json()
             raise MyPermobilAPIException(resp.get("error", resp))
         else:
