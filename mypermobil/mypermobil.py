@@ -138,7 +138,9 @@ class MyPermobil:
     # Magic methods
     def __str__(self) -> str:
         """str."""
-        return f"MyPermobil({self.application}, {self.email}, {self.region}, {self.code}, {self.token}, {self.headers}, {self.expiration_date})"
+        app, email, region = self.application, self.email, self.region
+        code, token, exp = self.code, self.token, self.expiration_date
+        return f"Permobil({app}, {email}, {region}, {code}, {token}, {exp})"
 
     # Selectors
     @property
