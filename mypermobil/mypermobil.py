@@ -18,17 +18,36 @@ from .const import (
 # TODO replace asserts with exceptions
 
 
-class MyPermobilAPIException(Exception):
-    """Permobil API Exception. Exception raised when the API returns an error."""
+class MyPermobilException(Exception):
+    """Permobil Exception. Generic Permobil Exception."""
 
 
-class MyPermobilClientException(Exception):
-    """Permobil API Exception. Exception raised when the Client is used incorrectly."""
+class MyPermobilAPIException(MyPermobilException):
+    """Permobil Exception. Exception raised when the API returns an error."""
+
+
+class MyPermobilConnectionException(MyPermobilException):
+    """Permobil Exception. Exception raised when the AIOHTTP."""
+
+
+class MyPermobilClientException(MyPermobilException):
+    """Permobil Exception. Exception raised when the Client is used incorrectly."""
 
 
 CACHE: Cache = Cache()
 CACHE_TTL = 5 * 60  # 5 minutes
+CACHE_ERROR_TTL = 10  # 10 seconds
 CACHE_LOCKS = {}
+
+
+async def async_get_cache(key):
+    """Get cache."""
+    # get the cached data
+    res = await CACHE.get(key)
+    if isinstance(res, Exception):
+        # if the cached data is an error, raise instead of returning
+        raise res
+    return res
 
 
 def cacheable(func):
@@ -39,20 +58,31 @@ def cacheable(func):
     async def wrapper(*args, **kwargs):
         """wrapper."""
         key = func.__name__ + str(args) + str(kwargs)
-        cached_data = await CACHE.get(key)
+        # check if the request is already cached
+        cached_data = await async_get_cache(key)
         if cached_data:
+            # return cached data
             return cached_data
 
+        # check if the request is already in progress
         if key in CACHE_LOCKS:
+            # request is already in progress, wait for it to finish
             await CACHE_LOCKS[key].wait()
-            return await CACHE.get(key)
+            res = await async_get_cache(key)
+            return res  # return cached data once it has finished by other task
 
+        # start request it and lock other requests from starting
         CACHE_LOCKS[key] = asyncio.Event()
 
         try:
-            response = await func(*args, **kwargs)
-            await CACHE.set(key, response, ttl=CACHE_TTL)
+            response = await func(*args, **kwargs)  # make the request
+            await CACHE.set(key, response, ttl=CACHE_TTL)  # cache the response
+        except Exception as err:  # pylint: disable=broad-except
+            # if there is an error, cache the error and raise it
+            await CACHE.set(key, err, ttl=CACHE_ERROR_TTL)
+            raise err
         finally:
+            # regardless of the outcome, unlock other threads
             CACHE_LOCKS[key].set()
             del CACHE_LOCKS[key]
         return response
@@ -188,12 +218,48 @@ class MyPermobil:
         self.authenticated = True
 
     # API Methods
+    async def get_request(self, *args, **kwargs):
+        """Get request."""
+        if "timeout" not in kwargs:
+            kwargs["timeout"] = self.request_timeout
+        if "headers" not in kwargs and self.authenticated:
+            kwargs["headers"] = self.headers
+
+        try:
+            return await self.session.get(*args, **kwargs)
+        except aiohttp.ClientConnectorError as err:
+            raise MyPermobilConnectionException("Connection error") from err
+        except asyncio.TimeoutError as err:
+            raise MyPermobilConnectionException("Connection timeout") from err
+        except aiohttp.ClientError as err:
+            raise MyPermobilConnectionException("Client error") from err
+        except Exception as err:
+            raise MyPermobilAPIException("Unknown error") from err
+
+    async def post_request(self, *args, **kwargs):
+        """Post request."""
+        if "timeout" not in kwargs:
+            kwargs["timeout"] = self.request_timeout
+        if "headers" not in kwargs and self.authenticated:
+            kwargs["headers"] = self.headers
+
+        try:
+            return await self.session.post(*args, **kwargs)
+        except aiohttp.ClientConnectorError as err:
+            raise MyPermobilConnectionException("Connection error") from err
+        except asyncio.TimeoutError as err:
+            raise MyPermobilConnectionException("Connection timeout") from err
+        except aiohttp.ClientError as err:
+            raise MyPermobilConnectionException("Client error") from err
+        except Exception as err:
+            raise MyPermobilAPIException("Unknown error") from err
+
     @cacheable
     async def request_regions(
         self, include_icons: bool = False, include_internal: bool = False
     ):
         """Get regions."""
-        response = await self.session.get(GET_REGIONS, timeout=10)
+        response = await self.get_request(GET_REGIONS, timeout=1, headers={})
         if response.status == 200:
             response_json = await response.json()
             regions = {}
@@ -246,11 +312,8 @@ class MyPermobil:
 
         email = validate_email(email)
         url = region + ENDPOINT_APPLICATIONLINKS
-        response = await self.session.post(
-            url,
-            json={"username": email, "application": application},
-            timeout=self.request_timeout,
-        )
+        json = {"username": email, "application": application}
+        response = await self.post_request(url, json=json)
         if response.status != 204:
             text = await response.text()
             raise MyPermobilAPIException(text)
@@ -276,16 +339,14 @@ class MyPermobil:
         email = validate_email(email)
         code = validate_code(code)
         url = self.region + ENDPOINT_APPLICATIONAUTHENTICATIONS
-        response = await self.session.post(
-            url,
-            json={
-                "username": email,
-                "code": code,
-                "application": application,
-                "expirationDate": expiration_date,
-            },
-            timeout=self.request_timeout,
-        )
+        json = {
+            "username": email,
+            "code": code,
+            "application": application,
+            "expirationDate": expiration_date,
+        }
+        response = await self.post_request(url, json=json)
+
         if response.status == 200:
             json = await response.json()
             self.set_token(json.get("token"))
@@ -320,6 +381,7 @@ class MyPermobil:
         endpoint = ENDPOINT_LOOKUP.get(item)
         if endpoint is None:
             raise MyPermobilClientException(f"Invalid item: {item}")
+
         response = await self.request_endpoint(endpoint, headers)
         return response.get(item)
 
@@ -330,14 +392,12 @@ class MyPermobil:
             headers = self.headers
         assert headers is not None
 
-        resp = await self.session.get(
-            self.region + endpoint,
-            headers=headers,
-            timeout=self.request_timeout,
-        )
-        if resp.status >= 200 and resp.status < 300:
-            return await resp.json()
-        else:
-            text = await resp.text()
-            status = resp.status
-            raise MyPermobilAPIException(f"Permobil API {status}: {text}")
+        resp = await self.get_request(self.region + endpoint)
+        status = resp.status
+        json = await resp.json()
+        if status >= 200 and status < 300:
+            return json
+
+        text = await resp.text()
+        msg = json.get("error", text)
+        raise MyPermobilAPIException(f"Permobil API {status}: {msg}")
