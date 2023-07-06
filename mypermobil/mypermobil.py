@@ -11,11 +11,10 @@ from .const import (
     ENDPOINT_APPLICATIONAUTHENTICATIONS,
     ENDPOINT_APPLICATIONLINKS,
     ENDPOINT_LOOKUP,
+    ITEM_LOOKUP,
     GET_REGIONS,
     EMAIL_REGEX,
 )
-
-# TODO replace asserts with exceptions
 
 
 class MyPermobilException(Exception):
@@ -101,19 +100,20 @@ def validate_email(email: str) -> str:
 
 def validate_code(code: str) -> str:
     """Validates an code."""
-    try:
-        _ = int(code)
-    except ValueError as err:
-        raise MyPermobilClientException("Code must be a number") from err
+    if not code:
+        raise MyPermobilClientException("Missing code")
+    if not code.isdigit():
+        raise MyPermobilClientException("Code must be a number")
     if len(code) != 6:
-        # the code must be 6 digits long
         raise MyPermobilClientException("Code must be 6 digits long")
     return code
 
 
 def validate_token(token: str) -> str:
     """Validates an token."""
-    if not token or len(token) != 256:
+    if not token:
+        raise MyPermobilClientException("Missing token")
+    if len(token) != 256:
         # the token must be 256 characters long
         raise MyPermobilClientException("Invalid token")
     return token
@@ -134,6 +134,15 @@ def validate_expiration_date(expiration_date: str) -> str:
     return expiration_date
 
 
+def validate_region(region: str) -> str:
+    """Validates an region."""
+    if not region:
+        raise MyPermobilClientException("Missing region")
+    if not region.startswith("https://") and not region.startswith("http://"):
+        raise MyPermobilClientException("Region missing protocol")
+    return region
+
+
 async def create_session():
     """Create a client session."""
     return aiohttp.ClientSession()
@@ -148,7 +157,7 @@ class MyPermobil:
         session: aiohttp.ClientSession,
         email: str = None,
         region: str = None,
-        code: int = None,
+        code: str = None,
         token: str = None,
         expiration_date: str = None,
         request_timeout: int = 10,
@@ -176,46 +185,69 @@ class MyPermobil:
     @property
     def headers(self):
         """headers."""
-        assert self.authenticated is True
+        if not self.authenticated:
+            raise MyPermobilClientException("Not authenticated")
         return {"Authorization": f"Bearer {self.token}"}
 
     def set_email(self, email: str):
         """Set email."""
-        assert self.authenticated is False
+        if self.authenticated:
+            raise MyPermobilClientException("Cannot change email after authentication")
         self.email = validate_email(email)
 
     def set_region(self, region: str):
         """Set region."""
-        assert self.authenticated is False
+        if self.authenticated:
+            raise MyPermobilClientException("Cannot change region after authentication")
         self.region = region
 
     def set_code(self, code: int):
         """Set code."""
-        assert self.authenticated is False
+        if self.authenticated:
+            raise MyPermobilClientException("Cannot change code after authentication")
         self.code = validate_code(code)
 
     def set_token(self, token: str):
         """Set token."""
-        assert self.authenticated is False
+        if self.authenticated:
+            raise MyPermobilClientException("Cannot change token after authentication")
         self.token = validate_token(token)
+
+    def set_expiration_date(self, expiration_date: str):
+        """Set expiration date."""
+        if self.authenticated:
+            raise MyPermobilClientException("Cannot change date after authentication")
+        self.expiration_date = validate_expiration_date(expiration_date)
 
     def set_application(self, application: str):
         """Set application."""
+        if self.authenticated:
+            raise MyPermobilClientException("Cannot change app after authentication")
         self.application = application
 
     async def close_session(self):
         """Close session."""
+        if self.session is None:
+            raise MyPermobilClientException("Session does not exist")
         await self.session.close()
 
     def self_authenticate(self):
         """authenticate. Manually set token and expiration date."""
-        assert self.authenticated is False
-        assert self.region is not None
-        assert bool(self.application)
+        if self.authenticated:
+            raise MyPermobilClientException("Already authenticated")
+        if not self.application:
+            raise MyPermobilClientException("Missing application name")
+        validate_region(self.region)
         validate_email(self.email)
         validate_token(self.token)
         validate_expiration_date(self.expiration_date)
         self.authenticated = True
+
+    def deauthenticate(self):
+        """deauthenticate."""
+        if not self.authenticated:
+            raise MyPermobilClientException("Not authenticated")
+        # TODO send deauthentication request
 
     # API Methods
     async def get_request(self, *args, **kwargs):
@@ -298,7 +330,6 @@ class MyPermobil:
         self, email: str = None, region: str = None, application: str = None
     ):
         """Post application link."""
-        assert self.authenticated is False
         if email is None:
             email = self.email
         if region is None:
@@ -306,39 +337,45 @@ class MyPermobil:
         if application is None:
             application = self.application
 
-        assert email is not None
-        assert region is not None
-        assert application is not None
-
+        if self.authenticated:
+            raise MyPermobilClientException("Already authenticated")
+        if not application:
+            raise MyPermobilClientException("Missing application name")
         email = validate_email(email)
+        region = validate_region(region)
+
         url = region + ENDPOINT_APPLICATIONLINKS
         json = {"username": email, "application": application}
         response = await self.post_request(url, json=json)
         if response.status != 204:
             text = await response.text()
             raise MyPermobilAPIException(text)
-        return True
 
     async def request_application_token(
         self,
         email: str = None,
         code: int = None,
+        region: str = None,
         application: str = None,
         expiration_date: str = None,
     ) -> str:
         """Post the application token."""
-        assert self.authenticated is False
-
         if email is None:
             email = self.email
         if code is None:
             code = self.code
+        if region is None:
+            region = self.region
         if application is None:
             application = self.application
 
+        if self.authenticated:
+            raise MyPermobilClientException("Already authenticated")
         email = validate_email(email)
+        region = validate_region(region)
         code = validate_code(code)
-        url = self.region + ENDPOINT_APPLICATIONAUTHENTICATIONS
+
+        url = region + ENDPOINT_APPLICATIONAUTHENTICATIONS
         json = {
             "username": email,
             "code": code,
@@ -349,14 +386,13 @@ class MyPermobil:
 
         if response.status == 200:
             json = await response.json()
-            self.set_token(json.get("token"))
-            self.authenticated = True
+            token = json.get("token")
             if expiration_date is None:
                 # set expiration date to 1 year from now
                 time_delta = datetime.timedelta(days=365)
                 date = datetime.datetime.now() + time_delta
                 expiration_date = date.strftime("%Y-%m-%d")
-            self.expiration_date = expiration_date
+
         elif response.status == 401:
             raise MyPermobilAPIException("Email not registered for region")
         elif response.status == 403:
@@ -368,19 +404,22 @@ class MyPermobil:
             text = await response.text()
             raise MyPermobilAPIException(text)
 
-        return self.token, self.expiration_date
+        return token, expiration_date
 
     async def request_item(
-        self, item: str, headers: dict = None
-    ) -> str | int | float | bool:
+        self, item: str, endpoint: str = None, headers: dict = None
+    ) -> str | int | float | bool | dict | list:
         """Takes and item, finds the endpoint and makes the request."""
         if headers is None:
             headers = self.headers
-        assert headers is not None
 
-        endpoint = ENDPOINT_LOOKUP.get(item)
         if endpoint is None:
-            raise MyPermobilClientException(f"Invalid item: {item}")
+            endpoint = ENDPOINT_LOOKUP.get(item)
+            if endpoint is None:
+                raise MyPermobilClientException(f"No endpoint for item: {item}")
+
+        if item not in ITEM_LOOKUP[endpoint]:
+            raise MyPermobilClientException(f"{item} not in endpoint {endpoint}")
 
         response = await self.request_endpoint(endpoint, headers)
         return response.get(item)
@@ -390,7 +429,6 @@ class MyPermobil:
         """Makes a request to an endpoint."""
         if headers is None:
             headers = self.headers
-        assert headers is not None
 
         resp = await self.get_request(self.region + endpoint)
         status = resp.status
