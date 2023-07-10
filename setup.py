@@ -10,6 +10,7 @@ setuptools.setup(
     license="MIT",
     packages=["mypermobil"],
     install_requires=["aiohttp", "aiocache"],
+    test_requires=["pytest", "aiounittest", "aiocache"],
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
 )

@@ -199,7 +199,7 @@ class MyPermobil:
         """Set region."""
         if self.authenticated:
             raise MyPermobilClientException("Cannot change region after authentication")
-        self.region = region
+        self.region = validate_region(region)
 
     def set_code(self, code: int):
         """Set code."""
@@ -230,6 +230,7 @@ class MyPermobil:
         if self.session is None:
             raise MyPermobilClientException("Session does not exist")
         await self.session.close()
+        self.session = None
 
     def self_authenticate(self):
         """authenticate. Manually set token and expiration date."""
@@ -291,7 +292,7 @@ class MyPermobil:
         self, include_icons: bool = False, include_internal: bool = False
     ):
         """Get regions."""
-        response = await self.get_request(GET_REGIONS, timeout=1, headers={})
+        response = await self.get_request(GET_REGIONS, headers={})
         if response.status == 200:
             response_json = await response.json()
             regions = {}
@@ -413,8 +414,11 @@ class MyPermobil:
         if headers is None:
             headers = self.headers
 
-        if endpoint is None:
-            endpoint = ENDPOINT_LOOKUP.get(item)
+        if endpoint not in ENDPOINT_LOOKUP:
+            if endpoint is None:
+                endpoint = ENDPOINT_LOOKUP.get(item)
+            else:
+                raise MyPermobilClientException(f"Invalid endpoint {endpoint}")
             if endpoint is None:
                 raise MyPermobilClientException(f"No endpoint for item: {item}")
 

@@ -3,3 +3,6 @@ dist
 build
 venv
 mypermobil.egg-info
+*.pyc
+tests/.coverage
+.coverage

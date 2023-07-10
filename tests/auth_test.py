@@ -14,22 +14,12 @@ class TestAuth(aiounittest.AsyncTestCase):
             "test",
             AsyncMock(),
             region="http://example.com",
-            email="valid@email.com",
         )
 
-    async def test_set_email(self):
-        email = "valid@email.com"
-        self.api.set_email(email)
-        self.assertEqual(self.api.email, email)
-
-        email = "invalid"
+    async def test_not_authenticated(self):
         with self.assertRaises(MyPermobilClientException):
-            self.api.set_email(email)
-
-    async def test_set_region(self):
-        region = "http://example.com"
-        self.api.set_region(region)
-        self.assertEqual(self.api.region, region)
+            x = self.api.headers
+        assert not self.api.authenticated
 
     async def test_request_application_code(self):
         self.api.set_email("valid@email.com")
