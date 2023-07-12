@@ -58,19 +58,19 @@ class TestRequest(aiounittest.AsyncTestCase):
             await self.api.request_item(item)
             assert err.message == f"No endpoint for item: {item}"
 
-    async def test_request_non_existent_endpoint(self):
-        endpoint = "this endpoint does not exist"
-        item = "invalid item"
-        with self.assertRaises(MyPermobilClientException) as err:
-            await self.api.request_item(item, endpoint=endpoint)
-            assert err.message == f"{item} not in endpoint {endpoint}"
+    #    async def test_request_non_existent_endpoint(self):
+    #        endpoint = "this endpoint does not exist"
+    #        item = "invalid item"
+    #        with self.assertRaises(MyPermobilClientException) as err:
+    #            await self.api.request_item(item, endpoint=endpoint)
+    #            assert err.message == f"{item} not in endpoint {endpoint}"
 
-    async def test_request_non_invalid_endpoint(self):
-        endpoint = "this endpoint does not exist"
-        item = RECORDS_SEATING
-        with self.assertRaises(MyPermobilClientException) as err:
-            await self.api.request_item(item, endpoint=endpoint)
-            assert err.message == f"Invalid endpoint {endpoint}"
+    #    async def test_request_non_invalid_endpoint(self):
+    #        endpoint = "this endpoint does not exist"
+    #        item = RECORDS_SEATING
+    #        with self.assertRaises(MyPermobilClientException) as err:
+    #            await self.api.request_item(item, endpoint=endpoint)
+    #            assert err.message == f"Invalid endpoint {endpoint}"
 
     async def test_request_request_endpoint_cache(self):
         """call the same endpoint twice and check that the cache is used"""

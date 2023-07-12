@@ -102,6 +102,8 @@ def validate_code(code: str) -> str:
     """Validates an code."""
     if not code:
         raise MyPermobilClientException("Missing code")
+    if " " in code or "\n" in code:
+        raise MyPermobilClientException("Code cannot contain spaces or newlines")
     if not code.isdigit():
         raise MyPermobilClientException("Code must be a number")
     if len(code) != 6:
@@ -369,12 +371,18 @@ class MyPermobil:
             region = self.region
         if application is None:
             application = self.application
+        if expiration_date is None:
+            # set expiration date to 1 year from now
+            time_delta = datetime.timedelta(days=365)
+            date = datetime.datetime.now() + time_delta
+            expiration_date = date.strftime("%Y-%m-%d")
 
         if self.authenticated:
             raise MyPermobilClientException("Already authenticated")
         email = validate_email(email)
         region = validate_region(region)
         code = validate_code(code)
+        expiration_date = validate_expiration_date(expiration_date)
 
         url = region + ENDPOINT_APPLICATIONAUTHENTICATIONS
         json = {
@@ -388,11 +396,6 @@ class MyPermobil:
         if response.status == 200:
             json = await response.json()
             token = json.get("token")
-            if expiration_date is None:
-                # set expiration date to 1 year from now
-                time_delta = datetime.timedelta(days=365)
-                date = datetime.datetime.now() + time_delta
-                expiration_date = date.strftime("%Y-%m-%d")
 
         elif response.status == 401:
             raise MyPermobilAPIException("Email not registered for region")
@@ -414,15 +417,13 @@ class MyPermobil:
         if headers is None:
             headers = self.headers
 
-        if endpoint not in ENDPOINT_LOOKUP:
-            if endpoint is None:
+        if endpoint is None:
+            if item in ENDPOINT_LOOKUP:
                 endpoint = ENDPOINT_LOOKUP.get(item)
             else:
-                raise MyPermobilClientException(f"Invalid endpoint {endpoint}")
-            if endpoint is None:
                 raise MyPermobilClientException(f"No endpoint for item: {item}")
 
-        if item not in ITEM_LOOKUP[endpoint]:
+        if endpoint in ITEM_LOOKUP and item not in ITEM_LOOKUP[endpoint]:
             raise MyPermobilClientException(f"{item} not in endpoint {endpoint}")
 
         response = await self.request_endpoint(endpoint, headers)

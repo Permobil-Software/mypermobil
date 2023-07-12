@@ -58,7 +58,40 @@ RECORDS_SEATING = "seatingRecord"
 RECORDS_SEATING_DATE = "seatingRecordDate"
 
 
-ENDPOINT_VA_PRODUCTS = "/api/v1/products"
+ENDPOINT_PRODUCTS = "/api/v1/products"
+
+PRODUCTS_ID = "_id"
+PRODUCTS_SERIAL = "WCSerial"
+PRODUCTS_BRAND_ID = "BrandId"
+PRODUCTS_MODEL = "Model"
+PRODUCTS_MANUFACTURED = "Manufactured"
+PRODUCTS_ICS_HARDWARE = "ICSHardware"
+PRODUCTS_STATUS = "Status"
+PRODUCTS_PREVIOUS_STATUS = "previousStatus"
+PRODUCTS_CUSTOMER_CODE = "customerCode"
+PRODUCTS_HIDE_GPS_POSITION = "hideGPSPosition"
+PRODUCTS_CONTRACT = "Contract"
+PRODUCTS_LIN_NODES = "LinNodes"
+PRODUCTS_LAST_UPDATED = "lastUpdated"
+PRODUCTS_MOST_RECENT = "mostRecent"
+PRODUCTS_BATTERY = "battery"
+PRODUCTS_SERVICE_AGREEMENTS = "serviceAgreements"
+PRODUCTS_CUSTOMIZATIONS = "customizations"
+PRODUCTS_FUNCTIONS = "functions"
+PRODUCTS_DELETED = "deleted"
+PRODUCTS_V = "__v"
+PRODUCTS_CREATED_AT = "createdAt"
+PRODUCTS_UPDATED_AT = "updatedAt"
+PRODUCTS_FIRST_USE = "FirstUse"
+PRODUCTS_TIMEZONE = "timezone"
+PRODUCTS_PC_SERIAL = "PCSerial"
+PRODUCTS_TELECOM = "telecom"
+PRODUCTS_UNIT_TYPE = "unitType"
+PRODUCTS_PERMOCELL_INFO = "permocellInfo"
+PRODUCTS_PUBLIC_KEY = "publicKey"
+PRODUCTS_PUBLIC_KEY_DATE = "publicKeyDate"
+PRODUCTS_CORRELATION_ID_COUNTER = "correlationIdCounter"
+PRODUCTS_CERTIFICATES = "certificates"
 
 
 ITEM_LOOKUP = {
@@ -100,7 +133,43 @@ ITEM_LOOKUP = {
         RECORDS_SEATING,
         RECORDS_SEATING_DATE,
     ],
-    ENDPOINT_VA_PRODUCTS: [],
+    ENDPOINT_PRODUCTS: [
+        {
+            PRODUCTS_ID: [
+                PRODUCTS_SERIAL,
+                PRODUCTS_BRAND_ID,
+                PRODUCTS_MODEL,
+                PRODUCTS_MANUFACTURED,
+                PRODUCTS_ICS_HARDWARE,
+                PRODUCTS_STATUS,
+                PRODUCTS_PREVIOUS_STATUS,
+                PRODUCTS_CUSTOMER_CODE,
+                PRODUCTS_HIDE_GPS_POSITION,
+                PRODUCTS_CONTRACT,
+                PRODUCTS_LIN_NODES,
+                PRODUCTS_LAST_UPDATED,
+                PRODUCTS_MOST_RECENT,
+                PRODUCTS_BATTERY,
+                PRODUCTS_SERVICE_AGREEMENTS,
+                PRODUCTS_CUSTOMIZATIONS,
+                PRODUCTS_FUNCTIONS,
+                PRODUCTS_DELETED,
+                PRODUCTS_V,
+                PRODUCTS_CREATED_AT,
+                PRODUCTS_UPDATED_AT,
+                PRODUCTS_FIRST_USE,
+                PRODUCTS_TIMEZONE,
+                PRODUCTS_PC_SERIAL,
+                PRODUCTS_TELECOM,
+                PRODUCTS_UNIT_TYPE,
+                PRODUCTS_PERMOCELL_INFO,
+                PRODUCTS_PUBLIC_KEY,
+                PRODUCTS_PUBLIC_KEY_DATE,
+                PRODUCTS_CORRELATION_ID_COUNTER,
+                PRODUCTS_CERTIFICATES,
+            ],
+        }
+    ],
 }
 
 # when multiple endpoints have the same item, the FIRST one in the list will be used
@@ -108,4 +177,5 @@ ENDPOINT_LOOKUP = {
     item: endpoint
     for endpoint, items in list(ITEM_LOOKUP.items())[::-1]
     for item in items
+    if isinstance(item, str)
 }
