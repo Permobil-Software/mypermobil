@@ -11,6 +11,8 @@ from .const import (
     ENDPOINT_APPLICATIONAUTHENTICATIONS,
     ENDPOINT_APPLICATIONLINKS,
     ENDPOINT_LOOKUP,
+    ENDPOINT_PRODUCTS,
+    PRODUCTS_ID,
     ITEM_LOOKUP,
     GET_REGIONS,
     EMAIL_REGEX,
@@ -153,6 +155,8 @@ async def create_session():
 class MyPermobil:
     """Permobil API."""
 
+    request_timeout = 10
+
     def __init__(
         self,
         application: str,
@@ -162,7 +166,7 @@ class MyPermobil:
         code: str = None,
         token: str = None,
         expiration_date: str = None,
-        request_timeout: int = 10,
+        product_id: str = None,
     ) -> None:
         """Initialize."""
         self.application = application
@@ -172,7 +176,7 @@ class MyPermobil:
         self.code = code
         self.token = token
         self.expiration_date = expiration_date
-        self.request_timeout = request_timeout
+        self.product_id = product_id
 
         self.authenticated = False
 
@@ -221,6 +225,10 @@ class MyPermobil:
             raise MyPermobilClientException("Cannot change date after authentication")
         self.expiration_date = validate_expiration_date(expiration_date)
 
+    def set_product_id(self, product_id: str):
+        """Set product id."""
+        self.product_id = product_id
+
     def set_application(self, application: str):
         """Set application."""
         if self.authenticated:
@@ -255,9 +263,9 @@ class MyPermobil:
     # API Methods
     async def get_request(self, *args, **kwargs):
         """Get request."""
-        if "timeout" not in kwargs:
+        if not kwargs.get("timeout"):
             kwargs["timeout"] = self.request_timeout
-        if "headers" not in kwargs and self.authenticated:
+        if not kwargs.get("headers") and self.authenticated:
             kwargs["headers"] = self.headers
 
         try:
@@ -273,9 +281,9 @@ class MyPermobil:
 
     async def post_request(self, *args, **kwargs):
         """Post request."""
-        if "timeout" not in kwargs:
+        if not kwargs.get("timeout"):
             kwargs["timeout"] = self.request_timeout
-        if "headers" not in kwargs and self.authenticated:
+        if not kwargs.get("headers") and self.authenticated:
             kwargs["headers"] = self.headers
 
         try:
@@ -410,12 +418,23 @@ class MyPermobil:
 
         return token, expiration_date
 
-    async def request_item(
-        self, item: str, endpoint: str = None, headers: dict = None
-    ) -> str | int | float | bool | dict | list:
-        """Takes and item, finds the endpoint and makes the request."""
+    async def request_product_id(self, headers: dict = None) -> str:
+        """Get product ids."""
         if headers is None:
             headers = self.headers
+
+        response = await self.request_endpoint(ENDPOINT_PRODUCTS, headers)
+        if not isinstance(response, list):
+            raise MyPermobilAPIException("Invalid response")
+        if len(response) != 1:
+            raise MyPermobilAPIException("Wrong number of products found")
+
+        return response.pop().get(PRODUCTS_ID)
+
+    async def request_item(
+        self, item: str, endpoint: str = None, **kwargs
+    ) -> str | int | float | bool | dict | list:
+        """Takes and item, finds the endpoint and makes the request."""
 
         if endpoint is None:
             if item in ENDPOINT_LOOKUP:
@@ -426,21 +445,28 @@ class MyPermobil:
         if endpoint in ITEM_LOOKUP and item not in ITEM_LOOKUP[endpoint]:
             raise MyPermobilClientException(f"{item} not in endpoint {endpoint}")
 
-        response = await self.request_endpoint(endpoint, headers)
+        response = await self.request_endpoint(endpoint, kwargs)
         return response.get(item)
 
     @cacheable
-    async def request_endpoint(self, endpoint: str, headers: dict = None) -> dict:
+    async def request_endpoint(
+        self, endpoint: str, headers: dict = None, product_id: str = None
+    ) -> dict:
         """Makes a request to an endpoint."""
         if headers is None:
             headers = self.headers
+        if product_id is None:
+            product_id = self.product_id
 
-        resp = await self.get_request(self.region + endpoint)
+        endpoint = endpoint.format(product_id=product_id)
+        resp = await self.get_request(self.region + endpoint, headers=headers)
         status = resp.status
-        json = await resp.json()
-        if status >= 200 and status < 300:
-            return json
-
-        text = await resp.text()
-        msg = json.get("error", text)
-        raise MyPermobilAPIException(f"Permobil API {status}: {msg}")
+        try:
+            json = await resp.json()
+            if status >= 200 and status < 300:
+                return json
+            text = await resp.text()
+            message = json.get("error", text)
+        except aiohttp.client_exceptions.ContentTypeError:
+            message = await resp.text()
+        raise MyPermobilAPIException(f"{status}: {message}")

@@ -61,37 +61,20 @@ RECORDS_SEATING_DATE = "seatingRecordDate"
 ENDPOINT_PRODUCTS = "/api/v1/products"
 
 PRODUCTS_ID = "_id"
-PRODUCTS_SERIAL = "WCSerial"
-PRODUCTS_BRAND_ID = "BrandId"
 PRODUCTS_MODEL = "Model"
-PRODUCTS_MANUFACTURED = "Manufactured"
-PRODUCTS_ICS_HARDWARE = "ICSHardware"
-PRODUCTS_STATUS = "Status"
-PRODUCTS_PREVIOUS_STATUS = "previousStatus"
-PRODUCTS_CUSTOMER_CODE = "customerCode"
-PRODUCTS_HIDE_GPS_POSITION = "hideGPSPosition"
-PRODUCTS_CONTRACT = "Contract"
-PRODUCTS_LIN_NODES = "LinNodes"
-PRODUCTS_LAST_UPDATED = "lastUpdated"
-PRODUCTS_MOST_RECENT = "mostRecent"
-PRODUCTS_BATTERY = "battery"
-PRODUCTS_SERVICE_AGREEMENTS = "serviceAgreements"
-PRODUCTS_CUSTOMIZATIONS = "customizations"
-PRODUCTS_FUNCTIONS = "functions"
-PRODUCTS_DELETED = "deleted"
-PRODUCTS_V = "__v"
-PRODUCTS_CREATED_AT = "createdAt"
-PRODUCTS_UPDATED_AT = "updatedAt"
-PRODUCTS_FIRST_USE = "FirstUse"
-PRODUCTS_TIMEZONE = "timezone"
-PRODUCTS_PC_SERIAL = "PCSerial"
-PRODUCTS_TELECOM = "telecom"
-PRODUCTS_UNIT_TYPE = "unitType"
-PRODUCTS_PERMOCELL_INFO = "permocellInfo"
-PRODUCTS_PUBLIC_KEY = "publicKey"
-PRODUCTS_PUBLIC_KEY_DATE = "publicKeyDate"
-PRODUCTS_CORRELATION_ID_COUNTER = "correlationIdCounter"
-PRODUCTS_CERTIFICATES = "certificates"
+
+
+ENDPOINT_PRODUCTS_POSITIONS = "/api/v1/products/{product_id}/positions"
+
+POSITIONS_CURRENT = "currentPosition"
+POSITIONS_PREVIOUS = "previousPositions"
+
+
+ENDPOINT_PRODUCT_BY_ID = "/api/v1/products/{product_id}"
+
+PRODUCT_BY_ID_MOST_RECENT_ODOMETER_TOTAL = ["mostRecent", "odometerTotal"]
+PRODUCT_BY_ID_MOST_RECENT_ODOMETER_TRIP = ["mostRecent", "odometerTrip"]
+PRODUCT_BY_ID_UPDATED_AT = "updatedAt"
 
 
 ITEM_LOOKUP = {
@@ -133,42 +116,17 @@ ITEM_LOOKUP = {
         RECORDS_SEATING,
         RECORDS_SEATING_DATE,
     ],
+    ENDPOINT_PRODUCTS_POSITIONS: [
+        POSITIONS_CURRENT,
+        POSITIONS_PREVIOUS,
+    ],
     ENDPOINT_PRODUCTS: [
-        {
-            PRODUCTS_ID: [
-                PRODUCTS_SERIAL,
-                PRODUCTS_BRAND_ID,
-                PRODUCTS_MODEL,
-                PRODUCTS_MANUFACTURED,
-                PRODUCTS_ICS_HARDWARE,
-                PRODUCTS_STATUS,
-                PRODUCTS_PREVIOUS_STATUS,
-                PRODUCTS_CUSTOMER_CODE,
-                PRODUCTS_HIDE_GPS_POSITION,
-                PRODUCTS_CONTRACT,
-                PRODUCTS_LIN_NODES,
-                PRODUCTS_LAST_UPDATED,
-                PRODUCTS_MOST_RECENT,
-                PRODUCTS_BATTERY,
-                PRODUCTS_SERVICE_AGREEMENTS,
-                PRODUCTS_CUSTOMIZATIONS,
-                PRODUCTS_FUNCTIONS,
-                PRODUCTS_DELETED,
-                PRODUCTS_V,
-                PRODUCTS_CREATED_AT,
-                PRODUCTS_UPDATED_AT,
-                PRODUCTS_FIRST_USE,
-                PRODUCTS_TIMEZONE,
-                PRODUCTS_PC_SERIAL,
-                PRODUCTS_TELECOM,
-                PRODUCTS_UNIT_TYPE,
-                PRODUCTS_PERMOCELL_INFO,
-                PRODUCTS_PUBLIC_KEY,
-                PRODUCTS_PUBLIC_KEY_DATE,
-                PRODUCTS_CORRELATION_ID_COUNTER,
-                PRODUCTS_CERTIFICATES,
-            ],
-        }
+        PRODUCTS_ID,
+    ],
+    ENDPOINT_PRODUCT_BY_ID: [
+        PRODUCT_BY_ID_MOST_RECENT_ODOMETER_TOTAL,
+        PRODUCT_BY_ID_MOST_RECENT_ODOMETER_TRIP,
+        PRODUCT_BY_ID_UPDATED_AT,
     ],
 }
 
