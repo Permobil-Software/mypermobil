@@ -33,7 +33,7 @@ class TestRequest(aiounittest.AsyncTestCase):
 
     async def test_request_item(self):
         resp = AsyncMock(status=200)
-        resp.json = AsyncMock(return_value={BATTERY_AMPERE_HOURS_LEFT: 123})
+        resp.json = AsyncMock(return_value={BATTERY_AMPERE_HOURS_LEFT[0]: 123})
         self.api.get_request = AsyncMock(return_value=resp)
 
         res = await self.api.request_item(BATTERY_AMPERE_HOURS_LEFT)
@@ -76,7 +76,7 @@ class TestRequest(aiounittest.AsyncTestCase):
         """call the same endpoint twice and check that the cache is used"""
         resp = AsyncMock(status=200)
         resp.json = AsyncMock(
-            return_value={RECORDS_DISTANCE: 123, RECORDS_SEATING: 456}
+            return_value={RECORDS_DISTANCE[0]: 123, RECORDS_SEATING[0]: 456}
         )
         self.api.get_request = AsyncMock(return_value=resp)
 
@@ -93,7 +93,7 @@ class TestRequest(aiounittest.AsyncTestCase):
 
         async def delay():
             await asyncio.sleep(2)
-            return {RECORDS_DISTANCE: 123, RECORDS_SEATING: 456}
+            return {RECORDS_DISTANCE[0]: 123, RECORDS_SEATING[0]: 456}
 
         resp = AsyncMock(status=200)
         resp.json = AsyncMock(side_effect=delay)

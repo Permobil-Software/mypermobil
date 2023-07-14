@@ -147,6 +147,15 @@ def validate_region(region: str) -> str:
     return region
 
 
+def validate_product_id(product_id: str) -> str:
+    """Validates a product_id."""
+    if not product_id:
+        raise MyPermobilClientException("Missing product id")
+    if len(product_id) != 24:
+        raise MyPermobilClientException("Invalid product id")
+    return product_id
+
+
 async def create_session():
     """Create a client session."""
     return aiohttp.ClientSession()
@@ -227,7 +236,7 @@ class MyPermobil:
 
     def set_product_id(self, product_id: str):
         """Set product id."""
-        self.product_id = product_id
+        self.product_id = validate_product_id(product_id)
 
     def set_application(self, application: str):
         """Set application."""
@@ -419,7 +428,9 @@ class MyPermobil:
         return token, expiration_date
 
     async def request_product_id(self, headers: dict = None) -> str:
-        """Get product ids."""
+        """Get product id from the API."""
+        # this function is equivalent to request_item(PRODUCTS_ID, ENDPOINT_PRODUCTS)
+        # but it has better error handling
         if headers is None:
             headers = self.headers
 
@@ -429,24 +440,36 @@ class MyPermobil:
         if len(response) != 1:
             raise MyPermobilAPIException("Wrong number of products found")
 
-        return response.pop().get(PRODUCTS_ID)
+        return response[PRODUCTS_ID[0]][PRODUCTS_ID[1]]
 
     async def request_item(
-        self, item: str, endpoint: str = None, **kwargs
+        self, items: str | list[str], endpoint: str = None, **kwargs
     ) -> str | int | float | bool | dict | list:
-        """Takes and item, finds the endpoint and makes the request."""
+        """Takes a single item or list of items, finds the endpoint and makes the request."""
+        if not items:
+            raise MyPermobilClientException("No item(s) provided")
+
+        if isinstance(items, str):
+            items = [items]
 
         if endpoint is None:
-            if item in ENDPOINT_LOOKUP:
-                endpoint = ENDPOINT_LOOKUP.get(item)
+            key = str(items)
+            if key in ENDPOINT_LOOKUP:
+                endpoint = ENDPOINT_LOOKUP.get(key)
             else:
-                raise MyPermobilClientException(f"No endpoint for item: {item}")
+                raise MyPermobilClientException(f"No endpoint for: {key}")
 
-        if endpoint in ITEM_LOOKUP and item not in ITEM_LOOKUP[endpoint]:
-            raise MyPermobilClientException(f"{item} not in endpoint {endpoint}")
-
+        # dive into the response for each item in the list
         response = await self.request_endpoint(endpoint, kwargs)
-        return response.get(item)
+        for item in items:
+            if isinstance(response, dict) and item not in response:
+                raise MyPermobilClientException(f"{item} not in response")
+            if isinstance(response, list) and item >= len(response):
+                raise MyPermobilClientException(
+                    f"Too few items in response {item} >= {len(response)}"
+                )
+            response = response[item]
+        return response
 
     @cacheable
     async def request_endpoint(
