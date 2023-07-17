@@ -13,7 +13,6 @@ from .const import (
     ENDPOINT_LOOKUP,
     ENDPOINT_PRODUCTS,
     PRODUCTS_ID,
-    ITEM_LOOKUP,
     GET_REGIONS,
     EMAIL_REGEX,
 )
