@@ -64,18 +64,18 @@ PRODUCTS_ID = [0, "_id"]
 PRODUCTS_MODEL = [0, "Model"]
 
 
-ENDPOINT_PRODUCTS_POSITIONS = "/api/v1/products/{product_id}/positions"
-
-POSITIONS_CURRENT = ["currentPosition"]
-POSITIONS_PREVIOUS = ["previousPositions"]
-
-
 ENDPOINT_PRODUCT_BY_ID = "/api/v1/products/{product_id}"
 
 PRODUCT_BY_ID_UPDATED_AT = ["updatedAt"]
 PRODUCT_BY_ID_MOST_RECENT = ["mostRecent"]
 PRODUCT_BY_ID_MOST_RECENT_ODOMETER_TOTAL = [*PRODUCT_BY_ID_MOST_RECENT, "odometerTotal"]
 PRODUCT_BY_ID_MOST_RECENT_ODOMETER_TRIP = [*PRODUCT_BY_ID_MOST_RECENT, "odometerTrip"]
+
+
+ENDPOINT_PRODUCTS_POSITIONS = "/api/v1/products/{product_id}/positions"
+
+POSITIONS_CURRENT = ["currentPosition"]
+POSITIONS_PREVIOUS = ["previousPositions"]
 
 
 ITEM_LOOKUP = {

@@ -78,6 +78,10 @@ class TestAuth(aiounittest.AsyncTestCase):
         with self.assertRaises(MyPermobilClientException):
             self.api.set_code(code)
 
+        code = " "
+        with self.assertRaises(MyPermobilClientException):
+            self.api.set_code(code)
+
     async def test_set_region(self):
         region = "http://example.com"
         self.api.set_region(region)
@@ -90,6 +94,19 @@ class TestAuth(aiounittest.AsyncTestCase):
         region = ""
         with self.assertRaises(MyPermobilClientException):
             self.api.set_region(region)
+
+    async def test_set_product_id(self):
+        id = "a" * 24
+        self.api.set_product_id(id)
+        self.assertEqual(self.api.product_id, id)
+
+        region = "a" * 10
+        with self.assertRaises(MyPermobilClientException):
+            self.api.set_product_id(region)
+
+        region = ""
+        with self.assertRaises(MyPermobilClientException):
+            self.api.set_product_id(region)
 
     async def test_auth_checks(self):
         # cannot authenticate without setting application name
@@ -123,6 +140,7 @@ class TestAuth(aiounittest.AsyncTestCase):
         self.api.set_application("test")
 
         self.api.self_authenticate()
+        assert self.api.headers == {"Authorization": f"Bearer {'a' * 256}"}
 
         with self.assertRaises(MyPermobilClientException):
             self.api.set_email("valid2@email.com")
