@@ -1,6 +1,8 @@
 """Constants for the Permobil integration."""
 
 EMAIL_REGEX = r"[^@]+@[^@]+\.[^@]+"
+MILES = "miles"
+KILOMETERS = "kilometers"
 
 GET_REGIONS = "https://cwcprod.permobil.com/api/v1/regions?includeFlags=on"
 GET_REGIONS_NO_FLAGS = "https://cwcprod.permobil.com/api/v1/regions"
