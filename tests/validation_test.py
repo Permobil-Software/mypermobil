@@ -115,7 +115,7 @@ class TestAuth(aiounittest.AsyncTestCase):
 
         # cannot deauth without authenticating
         with self.assertRaises(MyPermobilClientException):
-            self.api.deauthenticate()
+            await self.api.deauthenticate()
 
         self.api.set_email("valid@email.com")
         self.api.set_region("http://example.com")

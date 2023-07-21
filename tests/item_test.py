@@ -15,6 +15,10 @@ from mypermobil import (
     RECORDS_DISTANCE,
     RECORDS_SEATING,
     ENDPOINT_VA_USAGE_RECORDS,
+    GET,
+    POST,
+    DELETE,
+    PUT,
 )
 
 
@@ -36,19 +40,19 @@ class TestRequest(aiounittest.AsyncTestCase):
     async def test_request_item(self):
         resp = AsyncMock(status=200)
         resp.json = AsyncMock(return_value={BATTERY_AMPERE_HOURS_LEFT[0]: 123})
-        self.api.get_request = AsyncMock(return_value=resp)
+        self.api.make_request = AsyncMock(return_value=resp)
 
         res = await self.api.request_item(BATTERY_AMPERE_HOURS_LEFT)
 
         assert res == 123
-        assert self.api.get_request.call_count == 1
+        assert self.api.make_request.call_count == 1
 
     async def test_request_item_404(self):
         status = 404
         msg = "not found"
         resp = AsyncMock(status=status)
         resp.json = AsyncMock(return_value={"error": msg})
-        self.api.get_request = AsyncMock(return_value=resp)
+        self.api.make_request = AsyncMock(return_value=resp)
 
         with self.assertRaises(MyPermobilAPIException):
             await self.api.request_item(BATTERY_AMPERE_HOURS_LEFT)
@@ -88,7 +92,7 @@ class TestRequest(aiounittest.AsyncTestCase):
         resp.json = AsyncMock(
             side_effect=aiohttp.client_exceptions.ContentTypeError(mock, mock)
         )
-        self.api.get_request = AsyncMock(return_value=resp)
+        self.api.make_request = AsyncMock(return_value=resp)
         with self.assertRaises(MyPermobilAPIException):
             await self.api.request_endpoint("endpoint")
 
@@ -110,15 +114,15 @@ class TestRequest(aiounittest.AsyncTestCase):
         resp.json = AsyncMock(
             return_value={RECORDS_DISTANCE[0]: 123, RECORDS_SEATING[0]: 456}
         )
-        self.api.get_request = AsyncMock(return_value=resp)
+        self.api.make_request = AsyncMock(return_value=resp)
 
         res1 = await self.api.request_item(RECORDS_DISTANCE)
         res2 = await self.api.request_item(RECORDS_SEATING)
 
         assert res1 == 123
         assert res2 == 456
-        assert self.api.get_request.call_count == 1
-        assert self.api.get_request.call_args[0][0].endswith(ENDPOINT_VA_USAGE_RECORDS)
+        assert self.api.make_request.call_count == 1
+        assert self.api.make_request.call_args[0][1].endswith(ENDPOINT_VA_USAGE_RECORDS)
 
     async def test_request_request_endpoint_async(self):
         """call the same endpoint twice and check that the cache is used"""
@@ -129,7 +133,7 @@ class TestRequest(aiounittest.AsyncTestCase):
 
         resp = AsyncMock(status=200)
         resp.json = AsyncMock(side_effect=delay)
-        self.api.get_request = AsyncMock(return_value=resp)
+        self.api.make_request = AsyncMock(return_value=resp)
         task1 = asyncio.create_task(self.api.request_item(RECORDS_DISTANCE))
         task2 = asyncio.create_task(self.api.request_item(RECORDS_SEATING))
         res1 = await task1
@@ -137,30 +141,30 @@ class TestRequest(aiounittest.AsyncTestCase):
 
         assert res1 == 123
         assert res2 == 456
-        assert self.api.get_request.call_count == 1
-        assert self.api.get_request.call_args[0][0].endswith(ENDPOINT_VA_USAGE_RECORDS)
+        assert self.api.make_request.call_count == 1
+        assert self.api.make_request.call_args[0][1].endswith(ENDPOINT_VA_USAGE_RECORDS)
 
     async def test_request_request_endpoint_cache_exception(self):
         status = 404
         msg = "not found"
         resp = AsyncMock(status=status)
         resp.json = AsyncMock(return_value={"error": msg})
-        self.api.get_request = AsyncMock(return_value=resp)
+        self.api.make_request = AsyncMock(return_value=resp)
 
         with self.assertRaises(MyPermobilAPIException):
             await self.api.request_item(RECORDS_DISTANCE)
         with self.assertRaises(MyPermobilAPIException):
             await self.api.request_item(RECORDS_SEATING)
 
-        assert self.api.get_request.call_count == 1
-        assert self.api.get_request.call_args[0][0].endswith(ENDPOINT_VA_USAGE_RECORDS)
+        assert self.api.make_request.call_count == 1
+        assert self.api.make_request.call_args[0][1].endswith(ENDPOINT_VA_USAGE_RECORDS)
 
     async def test_request_get_request(self):
         session = AsyncMock(status=200)
         session.get = AsyncMock(return_value=AsyncMock(status=200))
         self.api.session = session
 
-        res = await self.api.get_request("http://example.com")
+        res = await self.api.make_request(GET, "http://example.com")
         assert res.status == 200
 
     async def test_request_get_request_exceptions(self):
@@ -169,25 +173,25 @@ class TestRequest(aiounittest.AsyncTestCase):
         session.get = AsyncMock(side_effect=aiohttp.ClientConnectorError(mock, mock))
         self.api.session = session
         with self.assertRaises(MyPermobilConnectionException):
-            await self.api.get_request("http://example.com")
+            await self.api.make_request(GET, "http://example.com")
 
         session = AsyncMock()
         session.get = AsyncMock(side_effect=asyncio.TimeoutError())
         self.api.session = session
         with self.assertRaises(MyPermobilConnectionException):
-            await self.api.get_request("http://example.com")
+            await self.api.make_request(GET, "http://example.com")
 
         session = AsyncMock()
         session.get = AsyncMock(side_effect=aiohttp.ClientError(None, None))
         self.api.session = session
         with self.assertRaises(MyPermobilConnectionException):
-            await self.api.get_request("http://example.com")
+            await self.api.make_request(GET, "http://example.com")
 
         session = AsyncMock()
         session.get = AsyncMock(side_effect=ValueError())
         self.api.session = session
         with self.assertRaises(MyPermobilAPIException):
-            await self.api.get_request("http://example.com")
+            await self.api.make_request(GET, "http://example.com")
 
     async def test_request_post_request_exceptions(self):
         session = AsyncMock()
@@ -195,25 +199,25 @@ class TestRequest(aiounittest.AsyncTestCase):
         session.post = AsyncMock(side_effect=aiohttp.ClientConnectorError(mock, mock))
         self.api.session = session
         with self.assertRaises(MyPermobilConnectionException):
-            await self.api.post_request("http://example.com")
+            await self.api.make_request(POST, "http://example.com")
 
         session = AsyncMock()
         session.post = AsyncMock(side_effect=asyncio.TimeoutError())
         self.api.session = session
         with self.assertRaises(MyPermobilConnectionException):
-            await self.api.post_request("http://example.com")
+            await self.api.make_request(POST, "http://example.com")
 
         session = AsyncMock()
         session.post = AsyncMock(side_effect=aiohttp.ClientError(None, None))
         self.api.session = session
         with self.assertRaises(MyPermobilConnectionException):
-            await self.api.post_request("http://example.com")
+            await self.api.make_request(POST, "http://example.com")
 
         session = AsyncMock()
         session.post = AsyncMock(side_effect=ValueError())
         self.api.session = session
         with self.assertRaises(MyPermobilAPIException):
-            await self.api.post_request("http://example.com")
+            await self.api.make_request(POST, "http://example.com")
 
     async def test_request_product_id(self):
         ttl = datetime.datetime.now() + datetime.timedelta(days=1)
@@ -249,6 +253,26 @@ class TestRequest(aiounittest.AsyncTestCase):
 
         with self.assertRaises(MyPermobilAPIException):
             await self.api.request_product_id()
+
+    async def test_request_invalid_request_type(self):
+        with self.assertRaises(MyPermobilClientException):
+            await self.api.make_request("invalid request type", "http://example.com")
+
+    async def test_request_put(self):
+        # there is no put request in the api so this is the test
+        session = AsyncMock()
+        session.put = AsyncMock(return_value=AsyncMock(status=200))
+        self.api.session = session
+        resp = await self.api.make_request(PUT, "http://example.com")
+        assert resp.status == 200
+
+    async def test_request_delete(self):
+        # there is no put request in the api so this is the test
+        session = AsyncMock()
+        session.delete = AsyncMock(return_value=AsyncMock(status=200))
+        self.api.session = session
+        resp = await self.api.make_request(DELETE, "http://example.com")
+        assert resp.status == 200
 
 
 if __name__ == "__main__":

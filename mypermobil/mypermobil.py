@@ -447,8 +447,6 @@ class MyPermobil:
         if headers is None:
             headers = self.headers
 
-        if not self.authenticated:
-            raise MyPermobilClientException("Not authenticated")
         if not application:
             raise MyPermobilClientException("Missing application name")
 
@@ -457,7 +455,7 @@ class MyPermobil:
 
         url = region + ENDPOINT_APPLICATIONLINKS
         json = {"application": application}
-        response = await self.make_request(DELETE, url, json=json)
+        response = await self.make_request(DELETE, url, json=json, headers=headers)
         if response.status != 204:
             text = await response.text()
             raise MyPermobilAPIException(text)
