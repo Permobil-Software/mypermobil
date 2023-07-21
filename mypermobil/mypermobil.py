@@ -15,6 +15,10 @@ from .const import (
     PRODUCTS_ID,
     GET_REGIONS,
     EMAIL_REGEX,
+    GET,
+    POST,
+    PUT,
+    DELETE,
 )
 
 
@@ -262,40 +266,40 @@ class MyPermobil:
         validate_expiration_date(self.expiration_date)
         self.authenticated = True
 
-    def deauthenticate(self):
-        """deauthenticate."""
-        if not self.authenticated:
-            raise MyPermobilClientException("Not authenticated")
-        # TODO send deauthentication request
+    def self_reauthenticate(self):
+        """Use when token is expired.
+
+        Reset token, expiration, and code. Sets authenticated to False.
+        """
+        if self.authenticated:
+            raise MyPermobilClientException("Already authenticated")
+        if not self.application:
+            raise MyPermobilClientException("Missing application name")
+        self.token = None
+        self.expiration_date = None
+        self.code = None
+        self.authenticated = False
 
     # API Methods
-    async def get_request(self, *args, **kwargs):
-        """Get request."""
+    async def make_request(self, request_type: str, *args, **kwargs):
+        """make a post, get, put or delete request"""
         if not kwargs.get("timeout"):
             kwargs["timeout"] = self.request_timeout
         if not kwargs.get("headers") and self.authenticated:
             kwargs["headers"] = self.headers
 
-        try:
-            return await self.session.get(*args, **kwargs)
-        except aiohttp.ClientConnectorError as err:
-            raise MyPermobilConnectionException("Connection error") from err
-        except asyncio.TimeoutError as err:
-            raise MyPermobilConnectionException("Connection timeout") from err
-        except aiohttp.ClientError as err:
-            raise MyPermobilConnectionException("Client error") from err
-        except Exception as err:
-            raise MyPermobilAPIException("Unknown error") from err
-
-    async def post_request(self, *args, **kwargs):
-        """Post request."""
-        if not kwargs.get("timeout"):
-            kwargs["timeout"] = self.request_timeout
-        if not kwargs.get("headers") and self.authenticated:
-            kwargs["headers"] = self.headers
+        if request_type not in (GET, POST, PUT, DELETE):
+            raise MyPermobilClientException("Invalid request type")
 
         try:
-            return await self.session.post(*args, **kwargs)
+            if request_type == GET:
+                return await self.session.get(*args, **kwargs)
+            if request_type == POST:
+                return await self.session.post(*args, **kwargs)
+            if request_type == PUT:
+                return await self.session.put(*args, **kwargs)
+            if request_type == DELETE:
+                return await self.session.delete(*args, **kwargs)
         except aiohttp.ClientConnectorError as err:
             raise MyPermobilConnectionException("Connection error") from err
         except asyncio.TimeoutError as err:
@@ -310,7 +314,7 @@ class MyPermobil:
         self, include_icons: bool = False, include_internal: bool = False
     ):
         """Get regions."""
-        response = await self.get_request(GET_REGIONS, headers={})
+        response = await self.make_request(GET, GET_REGIONS, headers={})
         if response.status == 200:
             response_json = await response.json()
             regions = {}
@@ -365,7 +369,7 @@ class MyPermobil:
 
         url = region + ENDPOINT_APPLICATIONLINKS
         json = {"username": email, "application": application}
-        response = await self.post_request(url, json=json)
+        response = await self.make_request(POST, url, json=json)
         if response.status != 204:
             text = await response.text()
             raise MyPermobilAPIException(text)
@@ -407,7 +411,7 @@ class MyPermobil:
             "application": application,
             "expirationDate": expiration_date,
         }
-        response = await self.post_request(url, json=json)
+        response = await self.make_request(POST, url, json=json)
 
         if response.status == 200:
             json = await response.json()
@@ -425,6 +429,38 @@ class MyPermobil:
             raise MyPermobilAPIException(text)
 
         return token, expiration_date
+
+    async def deauthenticate(
+        self,
+        email: str = None,
+        region: str = None,
+        application: str = None,
+        headers: dict = None,
+    ):
+        """deauthenticate."""
+        if email is None:
+            email = self.email
+        if region is None:
+            region = self.region
+        if application is None:
+            application = self.application
+        if headers is None:
+            headers = self.headers
+
+        if not self.authenticated:
+            raise MyPermobilClientException("Not authenticated")
+        if not application:
+            raise MyPermobilClientException("Missing application name")
+
+        email = validate_email(email)
+        region = validate_region(region)
+
+        url = region + ENDPOINT_APPLICATIONLINKS
+        json = {"application": application}
+        response = await self.make_request(DELETE, url, json=json)
+        if response.status != 204:
+            text = await response.text()
+            raise MyPermobilAPIException(text)
 
     async def request_product_id(self, headers: dict = None) -> str:
         """Get product id from the API."""
@@ -480,8 +516,8 @@ class MyPermobil:
         if product_id is None:
             product_id = self.product_id
 
-        endpoint = endpoint.format(product_id=product_id)
-        resp = await self.get_request(self.region + endpoint, headers=headers)
+        endpoint = self.region + endpoint.format(product_id=product_id)
+        resp = await self.make_request(GET, endpoint, headers=headers)
         status = resp.status
         try:
             json = await resp.json()

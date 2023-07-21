@@ -1,5 +1,10 @@
 """Constants for the Permobil integration."""
 
+GET = "get"
+POST = "post"
+PUT = "put"
+DELETE = "delete"
+
 EMAIL_REGEX = r"[^@]+@[^@]+\.[^@]+"
 MILES = "miles"
 KILOMETERS = "kilometers"
