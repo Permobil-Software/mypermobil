@@ -12,6 +12,10 @@ from .const import (
     ENDPOINT_APPLICATIONLINKS,
     ENDPOINT_LOOKUP,
     ENDPOINT_PRODUCTS,
+    ENDPOINT_BATTERY_INFO,
+    ENDPOINT_DAILY_USAGE,
+    ENDPOINT_VA_USAGE_RECORDS,
+    ENDPOINT_PRODUCTS_POSITIONS,
     PRODUCTS_ID,
     GET_REGIONS,
     EMAIL_REGEX,
@@ -526,3 +530,19 @@ class MyPermobil:
         except aiohttp.client_exceptions.ContentTypeError:
             message = await resp.text()
         raise MyPermobilAPIException(f"{status}: {message}")
+    
+    async def get_battery_info(self) -> dict:
+        """ request battery info """
+        return await self.request_endpoint(ENDPOINT_BATTERY_INFO)
+
+    async def get_daily_usage(self) -> dict:
+        """ request daily usage info """
+        return await self.request_endpoint(ENDPOINT_DAILY_USAGE)
+
+    async def get_usage_records(self) -> dict:
+        """ request records info """
+        return await self.request_endpoint(ENDPOINT_VA_USAGE_RECORDS)
+
+    async def get_gps_position(self) -> dict:
+        """ request gps info """
+        return await self.request_endpoint(ENDPOINT_PRODUCTS_POSITIONS)
