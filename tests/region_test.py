@@ -17,6 +17,7 @@ class TestRegion(unittest.TestCase):
             """Test the region names request"""
             session = await create_session()
             api = MyPermobil("test", session)
+            api.set_email("email.that.ends.with@permobil.com")
             names = await api.request_region_names()
             await api.close_session()
             assert len(names) > 0

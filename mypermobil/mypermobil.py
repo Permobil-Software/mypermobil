@@ -318,6 +318,9 @@ class MyPermobil:
         self, include_icons: bool = False, include_internal: bool = False
     ):
         """Get regions."""
+        if self.email and self.email.endswith("@permobil.com"):
+            self.include_internal = True
+
         response = await self.make_request(GET, GET_REGIONS, headers={})
         if response.status == 200:
             response_json = await response.json()
