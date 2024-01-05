@@ -323,7 +323,7 @@ class MyPermobil:
     ):
         """Get regions."""
         if self.email and self.email.endswith("@permobil.com"):
-            self.include_internal = True
+            include_internal = True
 
         response = await self.make_request(GET, GET_REGIONS, headers={})
         if response.status == 200:
@@ -392,7 +392,7 @@ class MyPermobil:
         region: str = None,
         application: str = None,
         expiration_date: str = None,
-    ) -> str:
+    ) -> tuple:
         """Post the application token."""
         if email is None:
             email = self.email
