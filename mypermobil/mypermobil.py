@@ -42,6 +42,10 @@ class MyPermobilClientException(MyPermobilException):
     """Permobil Exception. Exception raised when the Client is used incorrectly."""
 
 
+class MyPermobilEulaException(MyPermobilException):
+    """Permobil Exception. Exception raised when the client has not accepted the EULA."""
+
+
 CACHE: Cache = Cache()
 CACHE_TTL = 5 * 60  # 5 minutes
 CACHE_ERROR_TTL = 10  # 10 seconds
@@ -428,6 +432,8 @@ class MyPermobil:
             raise MyPermobilAPIException("Email not registered for region")
         elif response.status == 403:
             raise MyPermobilAPIException("Incorrect code")
+        elif response.status == 430:
+            raise MyPermobilEulaException("Please accept the EULA")
         elif response.status in (400, 500):
             resp = await response.json()
             raise MyPermobilAPIException(resp.get("error", resp))

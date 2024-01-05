@@ -4,7 +4,7 @@ import aiounittest
 import datetime
 import unittest
 from unittest.mock import MagicMock, AsyncMock
-from mypermobil import MyPermobil, MyPermobilClientException, MyPermobilAPIException
+from mypermobil import MyPermobil, MyPermobilClientException, MyPermobilAPIException, MyPermobilEulaException
 
 
 # pylint: disable=missing-docstring
@@ -91,6 +91,13 @@ class TestAuth(aiounittest.AsyncTestCase):
         resp.json = AsyncMock(return_value={"error": "test"})
         self.api.make_request = AsyncMock(return_value=resp)
         with self.assertRaises(MyPermobilAPIException):
+            await self.api.request_application_token(
+                email="test@example.com", code="123123"
+            )
+        resp = AsyncMock(status=430)
+        resp.json = AsyncMock(return_value={"error": "test"})
+        self.api.make_request = AsyncMock(return_value=resp)
+        with self.assertRaises(MyPermobilEulaException):
             await self.api.request_application_token(
                 email="test@example.com", code="123123"
             )
