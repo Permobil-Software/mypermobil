@@ -7,6 +7,14 @@ import re
 import aiohttp
 from aiocache import Cache
 
+from .exceptions import (
+    MyPermobilAPIException,
+    MyPermobilConnectionException,
+    MyPermobilClientException,
+    MyPermobilEulaException,
+    MyPermobilNoProductException,
+)
+
 from .const import (
     ENDPOINT_APPLICATIONAUTHENTICATIONS,
     ENDPOINT_APPLICATIONLINKS,
@@ -24,26 +32,6 @@ from .const import (
     PUT,
     DELETE,
 )
-
-
-class MyPermobilException(Exception):
-    """Permobil Exception. Generic Permobil Exception."""
-
-
-class MyPermobilAPIException(MyPermobilException):
-    """Permobil Exception. Exception raised when the API returns an error."""
-
-
-class MyPermobilConnectionException(MyPermobilException):
-    """Permobil Exception. Exception raised when the AIOHTTP."""
-
-
-class MyPermobilClientException(MyPermobilException):
-    """Permobil Exception. Exception raised when the Client is used incorrectly."""
-
-
-class MyPermobilEulaException(MyPermobilException):
-    """Permobil Exception. Exception raised when the client has not accepted the EULA."""
 
 
 CACHE: Cache = Cache()
@@ -101,6 +89,30 @@ def cacheable(func):
 
     return wrapper
 
+
+async def parse_response(response) -> dict:
+    try:
+        res = await response.json()
+        status = response.status
+    except aiohttp.client_exceptions.ContentTypeError:
+        raise MyPermobilAPIException("Invalid formatted server response")
+    if status == 200:
+        return res
+    elif status == 401:
+        raise MyPermobilAPIException("Email not registered for region")
+    elif status == 403:
+        raise MyPermobilAPIException("Incorrect code")
+    elif status == 430:
+        raise MyPermobilEulaException("Please accept the EULA")
+    elif status == 403:
+        raise MyPermobilNoProductException("Your account is not linked to a product")
+    else:
+        if 'error' in res:
+            raise MyPermobilAPIException(f"{status}: {res['error']}")
+        else:
+            text = await response.text()
+            raise MyPermobilAPIException(f"{status}: {text}")
+        
 
 def validate_email(email: str) -> str:
     """Validates an email."""
@@ -423,24 +435,8 @@ class MyPermobil:
             "expirationDate": expiration_date,
         }
         response = await self.make_request(POST, url, json=json)
-
-        if response.status == 200:
-            json = await response.json()
-            token = json.get("token")
-
-        elif response.status == 401:
-            raise MyPermobilAPIException("Email not registered for region")
-        elif response.status == 403:
-            raise MyPermobilAPIException("Incorrect code")
-        elif response.status == 430:
-            raise MyPermobilEulaException("Please accept the EULA")
-        elif response.status in (400, 500):
-            resp = await response.json()
-            raise MyPermobilAPIException(resp.get("error", resp))
-        else:
-            text = await response.text()
-            raise MyPermobilAPIException(text)
-
+        res = await parse_response(response)
+        token = res.get("token")
         return token, expiration_date
 
     async def deauthenticate(
@@ -529,16 +525,7 @@ class MyPermobil:
 
         endpoint = self.region + endpoint.format(product_id=product_id)
         resp = await self.make_request(GET, endpoint, headers=headers)
-        status = resp.status
-        try:
-            json = await resp.json()
-            if status >= 200 and status < 300:
-                return json
-            text = await resp.text()
-            message = json.get("error", text)
-        except aiohttp.client_exceptions.ContentTypeError:
-            message = await resp.text()
-        raise MyPermobilAPIException(f"{status}: {message}")
+        return await parse_response(resp)
     
     async def get_battery_info(self) -> dict:
         """ request battery info """

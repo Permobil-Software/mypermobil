@@ -76,13 +76,13 @@ class TestAuth(aiounittest.AsyncTestCase):
             await self.api.request_application_token()
 
     async def test_request_application_token_invalid_response(self):
-        self.api.make_request = AsyncMock(return_value=MagicMock(status=401))
+        self.api.make_request = AsyncMock(return_value=AsyncMock(status=401))
         with self.assertRaises(MyPermobilAPIException):
             await self.api.request_application_token(
                 email="test@example.com", code="123123"
             )
 
-        self.api.make_request = AsyncMock(return_value=MagicMock(status=403))
+        self.api.make_request = AsyncMock(return_value=AsyncMock(status=403))
         with self.assertRaises(MyPermobilAPIException):
             await self.api.request_application_token(
                 email="test@example.com", code="123123"
@@ -95,6 +95,14 @@ class TestAuth(aiounittest.AsyncTestCase):
                 email="test@example.com", code="123123"
             )
         resp = AsyncMock(status=430)
+        resp.json = AsyncMock(return_value={"error": "test"})
+        self.api.make_request = AsyncMock(return_value=resp)
+        with self.assertRaises(MyPermobilEulaException):
+            await self.api.request_application_token(
+                email="test@example.com", code="123123"
+            )
+
+        resp = AsyncMock(status=403)
         resp.json = AsyncMock(return_value={"error": "test"})
         self.api.make_request = AsyncMock(return_value=resp)
         with self.assertRaises(MyPermobilEulaException):
