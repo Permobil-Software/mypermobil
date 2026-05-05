@@ -6,3 +6,4 @@ mypermobil.egg-info
 *.pyc
 tests/.coverage
 .coverage
+*.exit

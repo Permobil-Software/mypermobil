@@ -1,6 +1,6 @@
 """ test auth control flow """
 
-import aiounittest
+import unittest
 import datetime
 import unittest
 from unittest.mock import MagicMock, AsyncMock
@@ -8,7 +8,7 @@ from mypermobil import MyPermobil, MyPermobilClientException, MyPermobilAPIExcep
 
 
 # pylint: disable=missing-docstring
-class TestAuth(aiounittest.AsyncTestCase):
+class TestAuth(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.api = MyPermobil(
             "test",

@@ -1,6 +1,6 @@
 """ test auth control flow """
 
-import aiounittest
+import unittest
 import datetime
 import unittest
 import aiohttp
@@ -11,7 +11,7 @@ from mypermobil import MyPermobil
 
 
 # pylint: disable=missing-docstring
-class TestRequest(aiounittest.AsyncTestCase):
+class TestRequest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         ttl = datetime.datetime.now() + datetime.timedelta(days=1)
         self.api = MyPermobil(

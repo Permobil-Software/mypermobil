@@ -104,15 +104,18 @@ async def parse_response(response) -> dict:
         raise MyPermobilAPIException("Incorrect code")
     elif status == 430:
         raise MyPermobilEulaException("Please accept the EULA")
-    elif status == 403:
-        raise MyPermobilNoProductException("Your account is not linked to a product")
+    # For the non auth endpoint this status code is meant for when the user
+    # has no product linked to their account, but this is a more rare error so
+    # the auth endpoint is more important
+    #elif status == 403:
+    #    raise MyPermobilNoProductException("Your account is not linked to a product")
     else:
         if 'error' in res:
             raise MyPermobilAPIException(f"{status}: {res['error']}")
         else:
             text = await response.text()
             raise MyPermobilAPIException(f"{status}: {text}")
-        
+
 
 def validate_email(email: str) -> str:
     """Validates an email."""
@@ -526,7 +529,7 @@ class MyPermobil:
         endpoint = self.region + endpoint.format(product_id=product_id)
         resp = await self.make_request(GET, endpoint, headers=headers)
         return await parse_response(resp)
-    
+
     async def get_battery_info(self) -> dict:
         """ request battery info """
         return await self.request_endpoint(ENDPOINT_BATTERY_INFO)
