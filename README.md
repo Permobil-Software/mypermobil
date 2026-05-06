@@ -1,3 +1,7 @@
+# PROJECT IS DEPRICATED
+
+The API is no longer in use and is not supported. The rest of the code is left as an archive.
+
 # MyPermobil-API
 
 [![PyPI version](https://badge.fury.io/py/mypermobil.svg)](https://badge.fury.io/py/mypermobil)
@@ -8,7 +12,7 @@ This is a subset of the MyPermobil API, originally published to be used with Hom
 
 The package is available on [pypi.org](https://pypi.org/project/mypermobil/) and installed with the command
 
-    python -m pip install mypermobil 
+    python -m pip install mypermobil
 
 It can also be manually installed by
 
